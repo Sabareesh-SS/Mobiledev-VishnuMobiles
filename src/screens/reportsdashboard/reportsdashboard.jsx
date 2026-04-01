@@ -19,7 +19,7 @@ import { generateAndSharePDF } from '../../utils/exportUtils';
 // ─── Install dependencies ─────────────────────────────────────────────────────
 // npm install react-native-svg
 
-import Svg, {Rect, Line, Text as SvgText} from 'react-native-svg';
+import RevenueChart from '../../components/revenuechart/RevenueChart';
 import NotificationIcon from '../../assets/basicicons/notification-13-svgrepo-com.svg';
 import DownloadIcon from '../../assets/basicicons/download-svgrepo-com.svg';
 import RefreshIcon from '../../assets/basicicons/refresh-ccw-alt-2-svgrepo-com.svg';
@@ -52,21 +52,33 @@ const IconPlaceholder = ({
   </View>
 );
 
+// ─── Helper for Dates ─────────────────────────────────────────────────────────
+const getPastDates = (num) => {
+  const dates = [];
+  for (let i = num - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase());
+  }
+  return dates;
+};
+const dailyDates = getPastDates(6);
+
 // ─── Static Data ──────────────────────────────────────────────────────────────
 const BAR_DATA = {
   Daily: [
-    {label: 'MON', sales: 75, profit: 45},
-    {label: 'TUE', sales: 90, profit: 55},
-    {label: 'WED', sales: 60, profit: 35},
-    {label: 'THU', sales: 85, profit: 60},
-    {label: 'FRI', sales: 95, profit: 65},
-    {label: 'SAT', sales: 80, profit: 50},
+    {label: dailyDates[0], sales: 75, profit: 45},
+    {label: dailyDates[1], sales: 90, profit: 55},
+    {label: dailyDates[2], sales: 60, profit: 35},
+    {label: dailyDates[3], sales: 85, profit: 60},
+    {label: dailyDates[4], sales: 95, profit: 65},
+    {label: dailyDates[5], sales: 80, profit: 50},
   ],
   Weekly: [
     {label: 'WK1', sales: 80, profit: 50},
     {label: 'WK2', sales: 65, profit: 40},
     {label: 'WK3', sales: 90, profit: 60},
-    {label: 'WK4', sales: 75, profit: 48},
+    {label: 'WK4', sales: 0, profit: 0},
   ],
   Monthly: [
     {label: 'JAN', sales: 70, profit: 42},
@@ -75,6 +87,12 @@ const BAR_DATA = {
     {label: 'APR', sales: 78, profit: 50},
     {label: 'MAY', sales: 88, profit: 60},
     {label: 'JUN', sales: 92, profit: 64},
+    {label: 'JUL', sales: 98, profit: 70},
+    {label: 'AUG', sales: 95, profit: 65},
+    {label: 'SEP', sales: 110, profit: 80},
+    {label: 'OCT', sales: 125, profit: 90},
+    {label: 'NOV', sales: 105, profit: 75},
+    {label: 'DEC', sales: 130, profit: 95},
   ],
 };
 
@@ -119,92 +137,6 @@ const NOTIFICATIONS = [
   { id: '3', title: 'Low Stock Alert', body: 'iPhone 15 Pro — only 3 units remaining.', time: '5h ago', dot: '#FF6B6B' },
   { id: '4', title: 'Excel Export Done', body: 'Monthly report exported successfully.', time: 'Yesterday', dot: '#FFB800' },
 ];
-
-// ─── Revenue Bar Chart ────────────────────────────────────────────────────────
-const RevenueChart = ({data}) => {
-  const chartW = SCREEN_WIDTH - 48;
-  const chartH = 160;
-  const paddingLeft = 28;
-  const paddingBottom = 24;
-  const barAreaH = chartH - paddingBottom;
-  const barCount = data.length;
-  const groupW = (chartW - paddingLeft) / barCount;
-  const barW = Math.min(groupW * 0.32, 18);
-  const maxVal = 100;
-
-  return (
-    <Svg width={chartW} height={chartH}>
-      {/* Y-Axis Labels & Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((frac, i) => {
-        const y = barAreaH - frac * barAreaH;
-        const val = Math.round(maxVal * frac);
-        return (
-          <React.Fragment key={i}>
-            <SvgText
-              x={paddingLeft - 6}
-              y={y + 3}
-              fontSize={9}
-              fill="#8A9BB0"
-              textAnchor="end"
-              fontWeight="600">
-              {val}k
-            </SvgText>
-            {frac > 0 && (
-              <Line
-                x1={paddingLeft}
-                y1={y}
-                x2={chartW}
-                y2={y}
-                stroke="#E8EAF6"
-                strokeWidth={1}
-                strokeDasharray="4,4"
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
-
-      {data.map((d, i) => {
-        const cx = paddingLeft + i * groupW + groupW / 2;
-        const salesH = (d.sales / maxVal) * barAreaH;
-        const profitH = (d.profit / maxVal) * barAreaH;
-
-        return (
-          <React.Fragment key={d.label}>
-            {/* Sales bar (back, lighter) */}
-            <Rect
-              x={cx - barW - 2}
-              y={barAreaH - salesH}
-              width={barW}
-              height={salesH}
-              rx={4}
-              fill="#C5CAE9"
-            />
-            {/* Profit bar (front, solid) */}
-            <Rect
-              x={cx + 2}
-              y={barAreaH - profitH}
-              width={barW}
-              height={profitH}
-              rx={4}
-              fill="#3D5AFE"
-            />
-            {/* Label */}
-            <SvgText
-              x={cx}
-              y={chartH - 4}
-              fontSize={9}
-              fill="#8A9BB0"
-              textAnchor="middle"
-              fontWeight="600">
-              {d.label}
-            </SvgText>
-          </React.Fragment>
-        );
-      })}
-    </Svg>
-  );
-};
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({value, color}) => (
