@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -42,13 +42,13 @@ const IconPlaceholder = ({
 // ─── QR Value Generator ───────────────────────────────────────────────────────
 const generateQRValue = (type) => {
   const timestamp = new Date().toISOString();
-  const sessionId = Math.random().toString(36).substring(2, 10).toUpperCase();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   return JSON.stringify({
     shop: 'VishnutMobileShop',
     type: type === 'in' ? 'CHECK_IN' : 'CHECK_OUT',
-    sessionId,
+    otp,
     timestamp,
-    validFor: 300, // seconds
+    validFor: 30, // seconds
   });
 };
 
@@ -60,6 +60,27 @@ const QRModal = ({
   onClose,
 }) => {
   const isIn = type === 'in';
+  const [timeLeft, setTimeLeft] = useState(30);
+
+  useEffect(() => {
+    if (visible && qrValue) {
+      const p = JSON.parse(qrValue);
+      setTimeLeft(p.validFor || 30);
+    }
+  }, [visible, qrValue]);
+
+  useEffect(() => {
+    let timer;
+    if (visible && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (visible && timeLeft === 0) {
+      onClose();
+    }
+    return () => clearInterval(timer);
+  }, [visible, timeLeft, onClose]);
+
   const parsed = qrValue ? JSON.parse(qrValue) : null;
 
   return (
@@ -82,9 +103,9 @@ const QRModal = ({
 
           {/* QR Code */}
           <View style={styles.modalQRWrapper}>
-            {qrValue ? (
+            {qrValue && parsed ? (
               <QRCode
-                value={qrValue}
+                value={parsed.otp}
                 size={200}
                 color="#1A1A2E"
                 backgroundColor="#FFFFFF"
@@ -95,14 +116,23 @@ const QRModal = ({
           {/* Session Info */}
           {parsed && (
             <View style={styles.modalMeta}>
-              <Text style={styles.modalMetaLabel}>Session ID</Text>
-              <Text style={styles.modalMetaValue}>{parsed.sessionId}</Text>
-              <Text style={styles.modalMetaLabel}>Generated At</Text>
-              <Text style={styles.modalMetaValue}>
-                {new Date(parsed.timestamp).toLocaleTimeString()}
-              </Text>
-              <Text style={styles.modalMetaLabel}>Valid For</Text>
-              <Text style={styles.modalMetaValue}>{parsed.validFor}s</Text>
+              <Text style={[styles.modalMetaLabel, { textAlign: 'center' }]}>One Time Password</Text>
+              <Text style={styles.otpValue}>{parsed.otp}</Text>
+              
+              <View style={styles.timerRow}>
+                <View style={styles.timerCol}>
+                  <Text style={styles.modalMetaLabel}>Generated At</Text>
+                  <Text style={styles.modalMetaValue}>
+                    {new Date(parsed.timestamp).toLocaleTimeString()}
+                  </Text>
+                </View>
+                <View style={[styles.timerCol, { alignItems: 'flex-end' }]}>
+                  <Text style={styles.modalMetaLabel}>Valid For</Text>
+                  <Text style={[styles.modalMetaValue, timeLeft <= 10 && styles.textDanger]}>
+                    {timeLeft}s
+                  </Text>
+                </View>
+              </View>
             </View>
           )}
 
@@ -180,6 +210,16 @@ const CheckCard = ({
   const isIn = type === 'in';
   const [qrValue, setQrValue] = useState(null);
 
+  useEffect(() => {
+    if (qrValue) {
+      const parsed = JSON.parse(qrValue);
+      const timer = setTimeout(() => {
+        setQrValue(null);
+      }, (parsed.validFor || 30) * 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [qrValue]);
+
   const handleGenerate = () => {
     const value = generateQRValue(type);
     setQrValue(value);
@@ -206,7 +246,7 @@ const CheckCard = ({
       <View style={[styles.qrBox, !isIn && styles.qrBoxOut]}>
         {qrValue ? (
           <QRCode
-            value={qrValue}
+            value={JSON.parse(qrValue).otp}
             size={80}
             color="#FFFFFF"
             backgroundColor="transparent"
@@ -670,6 +710,26 @@ const styles = StyleSheet.create({
     color: '#1A1A2E',
     fontWeight: '600',
     fontFamily: 'monospace',
+  },
+  otpValue: {
+    fontSize: 32,
+    color: '#3D5AFE',
+    fontWeight: '800',
+    letterSpacing: 6,
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  timerCol: {
+    flex: 1,
+  },
+  textDanger: {
+    color: '#FF6B6B',
   },
   modalDoneBtn: {
     marginHorizontal: 20,

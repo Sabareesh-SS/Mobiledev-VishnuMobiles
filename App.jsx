@@ -1,4 +1,4 @@
 import React from 'react';
-import StaffListScreen from './src/screens/stafflist/stafflist';
+import StaffAttendanceScreen from './src/screens/staffattendance/staffattendance';
 
-export default StaffListScreen;
+export default StaffAttendanceScreen;
